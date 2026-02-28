@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface CartItem {
   id: string;
@@ -24,7 +25,12 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const CART_STORAGE_KEY = 'safetyglasses_cart';
+const CART_STORAGE_PREFIX = 'safetyglasses_cart_';
+const LEGACY_CART_KEY = 'safetyglasses_cart'; // Old shared key - no longer used
+
+function getCartStorageKey(userId: string | undefined): string | null {
+  return userId ? `${CART_STORAGE_PREFIX}${userId}` : null;
+}
 
 function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -38,14 +44,33 @@ function generateUUID(): string {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    const stored = localStorage.getItem(CART_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  });
+  const { user } = useAuth();
+  const [items, setItems] = useState<CartItem[]>([]);
 
+  // Load cart for current user when user changes (login/logout/switch)
   useEffect(() => {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+    const key = getCartStorageKey(user?.id);
+    if (!key) {
+      setItems([]); // Not logged in: empty cart
+      return;
+    }
+    // Remove legacy shared cart key (one-time cleanup)
+    try {
+      localStorage.removeItem(LEGACY_CART_KEY);
+    } catch {
+      /* ignore */
+    }
+    const stored = localStorage.getItem(key);
+    setItems(stored ? JSON.parse(stored) : []);
+  }, [user?.id]);
+
+  // Persist cart to user-specific storage when items change (only when logged in)
+  useEffect(() => {
+    const key = getCartStorageKey(user?.id);
+    if (key) {
+      localStorage.setItem(key, JSON.stringify(items));
+    }
+  }, [items, user?.id]);
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
