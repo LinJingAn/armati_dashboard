@@ -1,0 +1,175 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COMPANY_MANAGER
+  USER
+}
+
+model Company {
+  id            String     @id @default(uuid())
+  cnpj          String     @unique
+  corporateName String     @map("corporate_name")
+  email         String?
+  phone         String?
+  status        String     @default("active")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  users         User[]
+  employees     Employee[]
+
+  @@map("companies")
+}
+
+model User {
+  id                   String      @id @default(uuid())
+  companyId            String?     @map("company_id")
+  company              Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  name                 String
+  email                String      @unique
+  password             String?
+  googleId             String?     @unique @map("google_id")
+  phone                String?
+  whatsapp             String?
+  role                 Role        @default(USER)
+  isActive             Boolean     @default(true) @map("is_active")
+  isEmailVerified      Boolean     @default(false) @map("is_email_verified")
+  emailVerifyToken     String?     @map("email_verify_token")
+  emailVerifyExpires   DateTime?   @map("email_verify_expires")
+  createdAt            DateTime    @default(now()) @map("created_at")
+  updatedAt            DateTime    @updatedAt @map("updated_at")
+  reviews              Review[]
+  userOrders           UserOrder[]
+
+  @@map("users")
+}
+
+model Employee {
+  id             String          @id @default(uuid())
+  companyId      String          @map("company_id")
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name           String
+  department     String?
+  registration   String?
+  shift          String?
+  unit           String?
+  photoUrl       String?         @map("photo_url")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  orders         Order[]
+  supportTickets SupportTicket[]
+
+  @@map("employees")
+}
+
+model Frame {
+  id             String          @id @default(uuid())
+  modelName      String          @map("model_name")
+  sku            String?
+  color          String?
+  size           String?
+  category       String?
+  brand          String?
+  price          Float?          @default(149.00)
+  image1Url      String?         @map("image_1_url")
+  image2Url      String?         @map("image_2_url")
+  image3Url      String?         @map("image_3_url")
+  image4Url      String?         @map("image_4_url")
+  isActive       Boolean         @default(true) @map("is_active")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  orders         Order[]
+  reviews        Review[]
+  userOrderItems UserOrderItem[]
+
+  @@map("frames")
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  employeeId      String   @map("employee_id")
+  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  frameId         String   @map("frame_id")
+  frame           Frame    @relation(fields: [frameId], references: [id], onDelete: Cascade)
+  status          String   @default("draft")
+  prescriptionUrl String?  @map("prescription_url")
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("orders")
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  employeeId  String   @map("employee_id")
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  status      String   @default("under_analysis")
+  description String
+  imageUrl    String?  @map("image_url")
+  resolution  String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("support_tickets")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  frameId   String   @map("frame_id")
+  frame     Frame    @relation(fields: [frameId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int
+  title     String?
+  comment   String?
+  isVerified Boolean @default(false) @map("is_verified")
+  helpful   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([frameId, userId])
+  @@map("reviews")
+}
+
+model UserOrder {
+  id              String          @id @default(uuid())
+  orderNumber     String          @unique @map("order_number")
+  userId          String          @map("user_id")
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          String          @default("pending")
+  subtotal        Float           @default(0)
+  tax             Float           @default(0)
+  shipping        Float           @default(0)
+  total           Float           @default(0)
+  shippingAddress String?         @map("shipping_address")
+  paymentMethod   String?         @map("payment_method")
+  notes           String?
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+  items           UserOrderItem[]
+
+  @@map("user_orders")
+}
+
+model UserOrderItem {
+  id        String    @id @default(uuid())
+  orderId   String    @map("order_id")
+  order     UserOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  frameId   String    @map("frame_id")
+  frame     Frame     @relation(fields: [frameId], references: [id], onDelete: Cascade)
+  quantity  Int       @default(1)
+  price     Float
+  color     String?
+  size      String?
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("user_order_items")
+}
