@@ -6,6 +6,7 @@ import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
 import { emailService } from '../../services/email.service.js';
 import type { LoginInput, RegisterInput, SignupInput, ResendVerificationInput, ChangePasswordInput } from './auth.schema.js';
+import { formatCnpj } from '../../utils/cnpj.js';
 
 function generateVerificationToken(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -110,6 +111,24 @@ export class AuthService {
       throw ApiError.conflict('Email already registered');
     }
 
+    let companyId: string | null = null;
+    let role: 'USER' | 'COMPANY_MANAGER' = 'USER';
+
+    if (data.cnpj) {
+      const cnpjFormatted = formatCnpj(data.cnpj);
+      const company = await prisma.company.findFirst({
+        where: { cnpj: cnpjFormatted },
+      });
+      if (company) {
+        companyId = company.id;
+        role = 'COMPANY_MANAGER';
+      } else {
+        throw ApiError.badRequest(
+          'Company with this CNPJ not found. Please contact admin to register your company first.'
+        );
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(data.password, 12);
     const verifyToken = generateVerificationToken();
     const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -119,7 +138,8 @@ export class AuthService {
         email: data.email,
         password: hashedPassword,
         name: data.name,
-        role: 'USER',
+        role,
+        companyId,
         phone: data.phone,
         isEmailVerified: false,
         emailVerifyToken: verifyToken,

@@ -19,6 +19,7 @@ interface SignupData {
   password: string;
   name: string;
   phone?: string;
+  cnpj?: string;
 }
 
 interface AuthResult {

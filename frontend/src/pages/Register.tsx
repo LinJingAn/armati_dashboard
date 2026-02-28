@@ -16,6 +16,7 @@ import {
   FiEyeOff,
   FiShield,
   FiCheckCircle,
+  FiBriefcase,
 } from 'react-icons/fi';
 import { FaGlasses } from 'react-icons/fa';
 import { HiCheckCircle } from 'react-icons/hi';
@@ -23,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getDefaultRouteForRole } from '@/components/ProtectedRoute';
 import { toast } from 'sonner';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
+import { formatCnpj, isValidCnpj, stripCnpj } from '@/lib/cnpj';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -30,6 +32,7 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [cnpj, setCnpj] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -77,8 +80,19 @@ export default function Register() {
       return;
     }
 
+    if (cnpj && !isValidCnpj(cnpj)) {
+      toast.error('CNPJ is invalid. Use format: XX.XXX.XXX/XXXX-XX');
+      return;
+    }
+
     setIsLoading(true);
-    const result = await signup({ name, email, password, phone: phone || undefined });
+    const result = await signup({ 
+      name, 
+      email, 
+      password, 
+      phone: phone || undefined,
+      cnpj: cnpj ? stripCnpj(cnpj) : undefined,
+    });
     setIsLoading(false);
 
     if (result.success && result.user) {
@@ -237,6 +251,38 @@ export default function Register() {
                   disabled={isLoading}
                 />
               </div>
+            </div>
+
+            {/* CNPJ - Company Management */}
+            <div className="space-y-1.5">
+              <Label htmlFor="cnpj" className="text-gray-400 text-sm">CNPJ (optional)</Label>
+              <div className="relative">
+                <FiBriefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                <Input
+                  id="cnpj"
+                  type="text"
+                  placeholder="00.000.000/0001-00"
+                  value={cnpj}
+                  onChange={(e) => setCnpj(formatCnpj(e.target.value))}
+                  maxLength={18}
+                  className={`pl-10 h-11 bg-[#1a2332] border-gray-700/50 text-white placeholder:text-gray-600 rounded-lg focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
+                    cnpj && !isValidCnpj(cnpj) ? 'border-red-500/50' : ''
+                  } ${cnpj && isValidCnpj(cnpj) ? 'border-emerald-500/50' : ''}`}
+                  disabled={isLoading}
+                />
+              </div>
+              {cnpj && !isValidCnpj(cnpj) && (
+                <p className="text-xs text-red-500 mt-1">Invalid CNPJ format</p>
+              )}
+              {cnpj && isValidCnpj(cnpj) && (
+                <p className="text-xs text-emerald-500 flex items-center gap-1 mt-1">
+                  <HiCheckCircle className="h-3 w-3" />
+                  Valid CNPJ
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Link to your company for manager access. Leave blank for personal account.
+              </p>
             </div>
 
             {/* Password */}

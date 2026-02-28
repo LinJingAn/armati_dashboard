@@ -48,6 +48,7 @@ interface SignupCredentials {
   password: string;
   name: string;
   phone?: string;
+  cnpj?: string;
 }
 
 interface LoginResponse {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidCnpj, stripCnpj } from '../../utils/cnpj.js';
 
 export const loginSchema = z.object({
   body: z.object({
@@ -25,6 +26,13 @@ export const signupSchema = z.object({
     password: z.string().min(6, 'Password must be at least 6 characters'),
     name: z.string().min(1, 'Name is required'),
     phone: z.string().optional(),
+    cnpj: z
+      .string()
+      .optional()
+      .refine((val) => !val || isValidCnpj(val), {
+        message: 'Invalid CNPJ format. Use 14 digits or XX.XXX.XXX/XXXX-XX',
+      })
+      .transform((val) => (val ? stripCnpj(val) : undefined)),
   }),
 });
 
