@@ -25,6 +25,7 @@ import {
   Download,
   Users,
   ArrowUpRight,
+  Plus,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -71,7 +72,7 @@ export default function Companies() {
     try {
       setLoading(true);
       const res = await client.entities.companies.query({ limit: 100, sort: '-created_at' });
-      setCompanies(res.data?.items || []);
+      setCompanies((res.data?.items || []) as Company[]);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load companies');
@@ -83,6 +84,12 @@ export default function Companies() {
   useEffect(() => {
     fetchCompanies();
   }, []);
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
 
   const openEdit = (company: Company) => {
     setEditingId(company.id);

@@ -14,7 +14,6 @@ import {
   FiChevronRight,
   FiSearch,
   FiAlertCircle,
-  FiCheckCircle,
 } from 'react-icons/fi';
 import { FaGlasses, FaFacebookF, FaInstagram, FaTwitter, FaYoutube } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
@@ -43,7 +42,7 @@ interface UserLayoutProps {
 export default function UserLayout({ children }: UserLayoutProps) {
   const { pathname } = useLocation();
   const navigate = useNavigate();
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout } = useAuth();
   const { itemCount } = useCart();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);

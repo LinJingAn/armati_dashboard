@@ -63,13 +63,24 @@ interface Company {
   corporateName: string;
 }
 
-const emptyForm = {
+type UserRole = 'ADMIN' | 'COMPANY_MANAGER' | 'USER';
+
+const emptyForm: {
+  name: string;
+  email: string;
+  password: string;
+  phone: string;
+  whatsapp: string;
+  role: UserRole;
+  companyId: string;
+  isActive: boolean;
+} = {
   name: '',
   email: '',
   password: '',
   phone: '',
   whatsapp: '',
-  role: 'USER' as const,
+  role: 'USER',
   companyId: '',
   isActive: true,
 };

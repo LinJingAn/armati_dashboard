@@ -59,20 +59,21 @@ export default function ManagerDashboard() {
       setLoading(true);
       try {
         const framesRes = await client.entities.frames.query({ limit: 100 });
-        
-        const frames = framesRes.data?.items || [];
-        const uniqueBrands = new Set(frames.map((f: { brand: string }) => f.brand).filter(Boolean));
-        const uniqueCategories = new Set(frames.map((f: { category: string }) => f.category).filter(Boolean));
+
+        type FrameItem = { id: string; modelName: string; brand: string; price: number; category: string; isActive?: boolean };
+        const frames = (framesRes.data?.items || []) as FrameItem[];
+        const uniqueBrands = new Set(frames.map((f) => f.brand).filter(Boolean));
+        const uniqueCategories = new Set(frames.map((f) => f.category).filter(Boolean));
 
         setStats({
           totalFrames: framesRes.data?.total || 0,
-          activeFrames: frames.filter((f: { isActive?: boolean }) => f.isActive !== false).length,
+          activeFrames: frames.filter((f) => f.isActive !== false).length,
           categories: uniqueCategories.size,
           brands: uniqueBrands.size,
         });
 
         setRecentFrames(
-          frames.slice(0, 5).map((f: { id: string; modelName: string; brand: string; price: number; category: string }) => ({
+          frames.slice(0, 5).map((f) => ({
             id: f.id,
             name: f.modelName,
             brand: f.brand || 'N/A',

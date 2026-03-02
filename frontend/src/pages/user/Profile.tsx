@@ -101,7 +101,7 @@ export default function Profile() {
           client.userOrders.getAll({ limit: 100 }),
         ]);
         if (statsRes.data) {
-          setOrderStats(prev => ({ ...prev, total: statsRes.data.total }));
+          setOrderStats(prev => ({ ...prev, total: statsRes.data?.total ?? 0 }));
         }
         if (ordersRes.data?.items) {
           const totalSpent = ordersRes.data.items.reduce((sum, order) => sum + (order.total || 0), 0);

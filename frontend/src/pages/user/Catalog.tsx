@@ -52,7 +52,7 @@ export default function Catalog() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
-  const [hoveredFrame, setHoveredFrame] = useState<string | null>(null);
+  const [, setHoveredFrame] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   
   const [priceRange, setPriceRange] = useState([0, 500]);
@@ -179,7 +179,7 @@ export default function Catalog() {
 
   const toggleFilter = (
     value: string,
-    selected: string[],
+    _selected: string[],
     setSelected: React.Dispatch<React.SetStateAction<string[]>>
   ) => {
     setSelected((prev) =>

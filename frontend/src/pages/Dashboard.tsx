@@ -95,8 +95,8 @@ export default function Dashboard() {
           supportTickets: ticketsRes.data?.total || 0,
         });
 
-        setRecentOrders(ordersRes.data?.items || []);
-        setRecentTickets(ticketsRes.data?.items || []);
+        setRecentOrders((ordersRes.data?.items || []) as RecentOrder[]);
+        setRecentTickets((ticketsRes.data?.items || []) as RecentTicket[]);
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
       } finally {

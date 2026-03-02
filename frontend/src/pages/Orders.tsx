@@ -1,40 +1,29 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { 
-  ShoppingCart, 
-  Search, 
-  Eye, 
-  Upload, 
-  ChevronRight, 
-  Filter, 
+import {
+  ShoppingCart,
+  Search,
+  Eye,
+  Filter,
   Download,
   Clock,
   CheckCircle2,
   Package,
   Truck,
-  MoreVertical,
   Calendar,
   User,
   Glasses,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import client from '@/lib/api';
 import Layout from '@/components/Layout';
@@ -96,19 +85,17 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [frames, setFrames] = useState<Frame[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [step, setStep] = useState(1);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
+  const [, setSaving] = useState(false);
+  const [prescriptionFile] = useState<File | null>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
-  const [form, setForm] = useState({
+  const [form] = useState({
     company_id: '',
     employee_id: '',
     frame_id: '',
@@ -139,11 +126,6 @@ export default function Orders() {
   useEffect(() => {
     fetchData();
   }, []);
-
-  const selectedFrame = frames.find((f) => f.id === Number(form.frame_id));
-  const filteredEmployees = form.company_id
-    ? employees.filter((e) => e.company_id === Number(form.company_id))
-    : employees;
 
   const openDetail = (order: Order) => {
     setSelectedOrder(order);
@@ -250,6 +232,8 @@ export default function Orders() {
               <Download className="h-4 w-4" />
               Export
             </Button>
+            {/* handleSave reserved for future Create order dialog */}
+            <Button type="button" onClick={handleSave} className="hidden" aria-hidden />
           </div>
         </div>
 
