@@ -26,6 +26,8 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+app.set('trust proxy', true);
+
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
   crossOriginOpenerPolicy: false,
@@ -66,8 +68,13 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-app.get('/api/config', (_req, res) => {
-  const baseUrl = env.API_PUBLIC_URL || `http://localhost:${env.PORT}`;
+app.get('/api/config', (req, res) => {
+  let baseUrl = env.API_PUBLIC_URL;
+  if (!baseUrl) {
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'http';
+    const host = req.get('x-forwarded-host') || req.get('host') || `localhost:${env.PORT}`;
+    baseUrl = `${protocol}://${host}`;
+  }
   res.json({ API_BASE_URL: baseUrl });
 });
 
