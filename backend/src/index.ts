@@ -50,8 +50,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
 app.use('/uploads', express.static(path.join(__dirname, '..', env.UPLOAD_DIR)));
-app.use(express.static(path.join(__dirname, '..', env.FRONTEND_DIR)));
 
+// API and health first so /api/* and /health never hit static or SPA fallback
 app.get('/health', async (_req, res) => {
   const db = await checkDatabaseStatus();
   res.status(db.connected ? 200 : 503).json({
@@ -66,9 +66,10 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, '..', env.FRONTEND_DIR, 'index.html'));
-})
+app.get('/api/config', (_req, res) => {
+  const baseUrl = env.API_PUBLIC_URL || `http://localhost:${env.PORT}`;
+  res.json({ API_BASE_URL: baseUrl });
+});
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/companies', companyRoutes);
@@ -82,6 +83,12 @@ app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/user-orders', userOrderRoutes);
 
 app.use(errorHandler);
+
+// Static frontend and SPA fallback last
+app.use(express.static(path.join(__dirname, '..', env.FRONTEND_DIR)));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', env.FRONTEND_DIR, 'index.html'));
+});
 
 app.use((_req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
