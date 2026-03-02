@@ -13,69 +13,52 @@ const defaultConfig = {
   API_BASE_URL: 'http://localhost:8000', // Only used if runtime config fails to load
 };
 
-// Function to load runtime configuration
+// Function to load runtime configuration (skipped when using static build with VITE_API_BASE_URL)
 export async function loadRuntimeConfig(): Promise<void> {
+  if (env.VITE_API_BASE_URL) {
+    configLoading = false;
+    return;
+  }
   try {
-    console.log('🔧 DEBUG: Starting to load runtime config...');
-    // Try to load configuration from a config endpoint
     const response = await fetch('/api/config');
     if (response.ok) {
       const contentType = response.headers.get('content-type');
-      // Only parse as JSON if the response is actually JSON
-      if (contentType && contentType.includes('application/json')) {
+      if (contentType?.includes('application/json')) {
         runtimeConfig = await response.json();
-        console.log('Runtime config loaded successfully');
-      } else {
-        console.log(
-          'Config endpoint returned non-JSON response, skipping runtime config'
-        );
       }
-    } else {
-      console.log(
-        '🔧 DEBUG: Config fetch failed with status:',
-        response.status
-      );
     }
-  } catch (error) {
-    console.log('Failed to load runtime config, using defaults:', error);
+  } catch {
+    // use defaultConfig
   } finally {
     configLoading = false;
-    console.log(
-      '🔧 DEBUG: Config loading finished, configLoading set to false'
-    );
   }
 }
 
-// Get current configuration
+// Get current configuration (build-time env wins for static deploy)
 export function getConfig() {
-  // If config is still loading, return default config to avoid using stale Vite env vars
-  if (configLoading) {
-    console.log('Config still loading, using default config');
+  if (configLoading && !env.VITE_API_BASE_URL) {
     return defaultConfig;
   }
-
-  // First try runtime config (for Lambda)
+  if (env.VITE_API_BASE_URL) {
+    return { API_BASE_URL: env.VITE_API_BASE_URL };
+  }
   if (runtimeConfig) {
-    console.log('Using runtime config');
     return runtimeConfig;
   }
-
-  if (env.VITE_API_BASE_URL) {
-    const viteConfig = {
-      API_BASE_URL: env.VITE_API_BASE_URL,
-    };
-    console.log('Using Vite environment config');
-    return viteConfig;
-  }
-
-  // Finally fall back to default
-  console.log('Using default config');
   return defaultConfig;
+}
+
+/** Ensure base URL has a protocol so it's never treated as a relative path. */
+function normalizeBaseURL(url: string): string {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return defaultConfig.API_BASE_URL;
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+  return `http://${trimmed}`;
 }
 
 // Dynamic API_BASE_URL getter - this will always return the current config
 export function getAPIBaseURL(): string {
-  return getConfig().API_BASE_URL;
+  return normalizeBaseURL(getConfig().API_BASE_URL);
 }
 
 // For backward compatibility, but this should be avoided
