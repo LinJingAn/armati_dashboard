@@ -1,3 +1,5 @@
+import { env } from './env';
+
 // Runtime configuration
 let runtimeConfig: {
   API_BASE_URL: string;
@@ -58,10 +60,9 @@ export function getConfig() {
     return runtimeConfig;
   }
 
-  // Then try Vite environment variables (for local development)
-  if (import.meta.env.VITE_API_BASE_URL) {
+  if (env.VITE_API_BASE_URL) {
     const viteConfig = {
-      API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+      API_BASE_URL: env.VITE_API_BASE_URL,
     };
     console.log('Using Vite environment config');
     return viteConfig;
