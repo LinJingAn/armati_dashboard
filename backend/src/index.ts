@@ -47,6 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
 
 app.use('/uploads', express.static(path.join(__dirname, '..', env.UPLOAD_DIR)));
+app.use(express.static(path.join(__dirname, '..', env.FRONTEND_DIR)));
 
 app.get('/health', async (_req, res) => {
   const db = await checkDatabaseStatus();
@@ -62,9 +63,9 @@ app.get('/health', async (_req, res) => {
   });
 });
 
-app.get('/api/config', (_req, res) => {
-  res.json({ API_BASE_URL: `http://localhost:${env.PORT}` });
-});
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, '..', env.FRONTEND_DIR, 'index.html'));
+})
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/companies', companyRoutes);

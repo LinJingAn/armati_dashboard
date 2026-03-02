@@ -13,6 +13,8 @@ export const env = {
   UPLOAD_DIR: process.env.UPLOAD_DIR || 'uploads',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
 
+  FRONTEND_DIR: process.env.FRONTEND_DIR || '../frontend/dist',
+
   // Google OAuth
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
