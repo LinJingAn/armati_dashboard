@@ -34,7 +34,7 @@ export class UserService {
       prisma.user.count(),
     ]);
 
-    return { items: items as UserWithoutPassword[], total, limit, offset };
+    return { items: items as unknown as UserWithoutPassword[], total, limit, offset };
   }
 
   async findById(id: string): Promise<UserWithoutPassword> {
@@ -59,7 +59,7 @@ export class UserService {
       throw ApiError.notFound('User not found');
     }
 
-    return user as UserWithoutPassword;
+    return user as unknown as UserWithoutPassword;
   }
 
   async create(data: CreateUserInput): Promise<UserWithoutPassword> {
@@ -107,7 +107,7 @@ export class UserService {
       },
     });
 
-    return user as UserWithoutPassword;
+    return user as unknown as UserWithoutPassword;
   }
 
   async update(id: string, data: UpdateUserInput): Promise<UserWithoutPassword> {
@@ -165,7 +165,7 @@ export class UserService {
       },
     });
 
-    return updatedUser as UserWithoutPassword;
+    return updatedUser as unknown as UserWithoutPassword;
   }
 
   async delete(id: string): Promise<void> {

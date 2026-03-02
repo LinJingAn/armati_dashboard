@@ -14,7 +14,14 @@ passport.use(
     async (_accessToken, _refreshToken, profile, done) => {
       try {
         const result = await authService.googleCallback(profile);
-        done(null, { ...result.user, jwtToken: result.token });
+        const u = result.user;
+        done(null, {
+          userId: u.id,
+          email: u.email,
+          role: u.role,
+          companyId: u.companyId ?? undefined,
+          jwtToken: result.token,
+        });
       } catch (error) {
         done(error as Error, undefined);
       }

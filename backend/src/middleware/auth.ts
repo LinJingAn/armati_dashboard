@@ -10,14 +10,6 @@ export interface JwtPayload {
   role: string;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: JwtPayload & { companyId?: string | null };
-    }
-  }
-}
-
 export const authenticate = async (
   req: Request,
   _res: Response,
