@@ -36,8 +36,8 @@ export class ImportService {
 
     const errors: string[] = [];
     if (result.errors.length > 0) {
-      result.errors.forEach((err) => {
-        errors.push(`Row ${err.row}: ${err.message}`);
+      result.errors.forEach((err: { row?: number; message: string }) => {
+        errors.push(`Row ${err.row ?? 0}: ${err.message}`);
       });
     }
 
