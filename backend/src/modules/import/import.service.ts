@@ -9,7 +9,7 @@ import {
   type UserRowInput,
   type EmployeeRowInput,
 } from './import.schema.js';
-import type { ImportLog, ImportLogEntry } from '@prisma/client';
+import { Prisma, type ImportLog, type ImportLogEntry } from '@prisma/client';
 import Papa from 'papaparse';
 import bcrypt from 'bcryptjs';
 
@@ -452,7 +452,7 @@ export class ImportService {
         rowNumber,
         status,
         entityId,
-        rawData,
+        rawData: rawData as Prisma.InputJsonValue,
         errorMessage,
       },
     });
