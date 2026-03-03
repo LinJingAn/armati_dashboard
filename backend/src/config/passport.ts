@@ -10,6 +10,8 @@ passport.use(
       clientSecret: env.GOOGLE_CLIENT_SECRET,
       callbackURL: env.GOOGLE_CALLBACK_URL,
       scope: ['profile', 'email'],
+      // Use OpenID Connect userinfo endpoint (current Google recommendation; avoids deprecated APIs)
+      userProfileURL: 'https://openidconnect.googleapis.com/v1/userinfo',
     },
     async (_accessToken, _refreshToken, profile, done) => {
       try {

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import passport from '../../config/passport.js';
 import {
   login,
@@ -36,22 +36,37 @@ router.post('/change-password', authenticate, validate(changePasswordSchema), ch
 router.get('/verify-email', validate(verifyEmailSchema), verifyEmail);
 router.post('/resend-verification', validate(resendVerificationSchema), resendVerification);
 
-// Google OAuth
+// Google OAuth — show account chooser then consent ("You're signing back in to [domain]")
 router.get(
   '/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    session: false,
+    // Space-delimited: select_account = account chooser; consent = "Sign in to [domain]" with Continue/Cancel
+    prompt: 'select_account consent',
+  })
 );
 
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: `${env.FRONTEND_URL}/auth/error?msg=Google+authentication+failed` }),
-  (_req: Request, res: Response) => {
-    const user = _req.user as { jwtToken?: string } | undefined;
-    if (!user?.jwtToken) {
-      return res.redirect(`${env.FRONTEND_URL}/auth/error?msg=Google+authentication+failed`);
+router.get('/google/callback', (req: Request, res: Response, next: NextFunction) => {
+  passport.authenticate(
+    'google',
+    { session: false },
+    (err: Error | null, user?: { jwtToken?: string }, info?: { message?: string }) => {
+      if (err) {
+        console.error('[Google OAuth] Callback error:', err.message);
+        if (err.name === 'InternalOAuthError' && (err as { oauthError?: unknown }).oauthError) {
+          console.error('[Google OAuth] OAuth error detail:', (err as { oauthError?: unknown }).oauthError);
+        }
+        const msg = encodeURIComponent('Google sign-in failed. Please try again.');
+        return res.redirect(`${env.FRONTEND_URL}/auth/error?msg=${msg}`);
+      }
+      if (!user?.jwtToken) {
+        const msg = encodeURIComponent(info?.message || 'Google authentication failed');
+        return res.redirect(`${env.FRONTEND_URL}/auth/error?msg=${msg}`);
+      }
+      res.redirect(`${env.FRONTEND_URL}/auth/google/callback?token=${user.jwtToken}`);
     }
-    res.redirect(`${env.FRONTEND_URL}/auth/google/callback?token=${user.jwtToken}`);
-  }
-);
+  )(req, res, next);
+});
 
 export default router;

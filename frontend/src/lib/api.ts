@@ -521,11 +521,366 @@ const userOrdersClient = {
   },
 };
 
+// Import types and client
+export interface ImportLogEntry {
+  id: string;
+  rowNumber: number;
+  status: 'success' | 'error' | 'skipped';
+  entityId: string | null;
+  rawData: Record<string, unknown> | null;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+export interface ImportLog {
+  id: string;
+  userId: string;
+  entityType: 'company' | 'user' | 'employee';
+  fileName: string;
+  status: 'processing' | 'completed' | 'failed';
+  totalRows: number;
+  successCount: number;
+  errorCount: number;
+  skipCount: number;
+  createdAt: string;
+  completedAt: string | null;
+  user?: { id: string; name: string; email: string };
+  entries?: ImportLogEntry[];
+}
+
+export interface ImportResult {
+  importLog: ImportLog;
+  summary: {
+    total: number;
+    success: number;
+    errors: number;
+    skipped: number;
+  };
+}
+
+// Company-Frame mapping client
+export interface CompanyFrame {
+  id: string;
+  companyId: string;
+  frameId: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FrameBasic {
+  id: string;
+  modelName: string;
+  color?: string | null;
+  size?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  price?: number | null;
+  image1Url?: string | null;
+}
+
+// Prescription types and client
+export interface PrescriptionSpec {
+  id: string;
+  orderId: string;
+  odSphere: number | null;
+  odCylinder: number | null;
+  odAxis: number | null;
+  odAddition: number | null;
+  osSphere: number | null;
+  osCylinder: number | null;
+  osAxis: number | null;
+  osAddition: number | null;
+  pdRight: number | null;
+  pdLeft: number | null;
+  pdBinocular: number | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PrescriptionInput {
+  odSphere?: number | null;
+  odCylinder?: number | null;
+  odAxis?: number | null;
+  odAddition?: number | null;
+  osSphere?: number | null;
+  osCylinder?: number | null;
+  osAxis?: number | null;
+  osAddition?: number | null;
+  pdRight?: number | null;
+  pdLeft?: number | null;
+  pdBinocular?: number | null;
+  notes?: string | null;
+}
+
+const prescriptionClient = {
+  async get(orderId: string): Promise<{ data: PrescriptionSpec | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/prescriptions/order/${orderId}`);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number; data?: { message?: string } } };
+      if (err.response?.status === 404) {
+        return { data: null };
+      }
+      return { data: null, error: err.response?.data?.message || 'Failed to get prescription' };
+    }
+  },
+  async upsert(orderId: string, data: PrescriptionInput): Promise<{ data: PrescriptionSpec | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.patch(`${baseURL}/api/v1/prescriptions/order/${orderId}`, data);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to save prescription' };
+    }
+  },
+};
+
+// Orders client with multi-item support
+export interface OrderItem {
+  id: string;
+  frameId: string;
+  quantity: number;
+  price: number | null;
+  color: string | null;
+  size: string | null;
+  notes: string | null;
+  frame: {
+    id: string;
+    modelName: string;
+    color?: string | null;
+    size?: string | null;
+    image1Url?: string | null;
+  };
+}
+
+export interface StatusHistoryEntry {
+  id: string;
+  fromStatus: string;
+  toStatus: string;
+  note: string | null;
+  createdAt: string;
+  user?: { id: string; name: string; email: string } | null;
+}
+
+export interface Order {
+  id: string;
+  orderNumber: string | null;
+  employeeId: string;
+  frameId: string | null;
+  status: string;
+  prescriptionUrl: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  employee?: {
+    id: string;
+    name: string;
+    department?: string | null;
+    registration?: string | null;
+    company?: { id: string; corporateName: string; cnpj?: string };
+  };
+  frame?: { id: string; modelName: string; color?: string | null; size?: string | null; image1Url?: string | null } | null;
+  items?: OrderItem[];
+  statusHistory?: StatusHistoryEntry[];
+}
+
+export interface AvailableTransition {
+  status: string;
+  requiresNote: boolean;
+}
+
+const ordersClient = {
+  async getAll(options: QueryOptions = {}): Promise<{ data: { items: Order[]; total: number } | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/orders`, { params: options });
+      return { data: response.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get orders' };
+    }
+  },
+  async getById(id: string): Promise<{ data: Order | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/orders/${id}`);
+      return { data: response.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get order' };
+    }
+  },
+  async getTransitions(id: string): Promise<{ data: { currentStatus: string; availableTransitions: AvailableTransition[] } | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/orders/${id}/transitions`);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get transitions' };
+    }
+  },
+  async getStatusHistory(id: string): Promise<{ data: StatusHistoryEntry[] | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/orders/${id}/status-history`);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get status history' };
+    }
+  },
+  async transitionStatus(id: string, status: string, note?: string): Promise<{ data: Order | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.post(`${baseURL}/api/v1/orders/${id}/transition`, { status, note });
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to update status' };
+    }
+  },
+};
+
+const companyFramesClient = {
+  async getCompanyFrames(companyId: string): Promise<{ data: FrameBasic[] | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/company-frames/company/${companyId}`);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get company frames' };
+    }
+  },
+  async getAvailableFrames(companyId: string): Promise<{ data: FrameBasic[] | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/company-frames/company/${companyId}/available`);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get available frames' };
+    }
+  },
+  async assignFrames(companyId: string, frameIds: string[]): Promise<{ data: CompanyFrame[] | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.post(`${baseURL}/api/v1/company-frames/company/${companyId}/assign`, { frameIds });
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to assign frames' };
+    }
+  },
+  async unassignFrames(companyId: string, frameIds: string[]): Promise<{ data: { removed: number } | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.post(`${baseURL}/api/v1/company-frames/company/${companyId}/unassign`, { frameIds });
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to unassign frames' };
+    }
+  },
+  async assignAllFrames(companyId: string): Promise<{ data: { assigned: number } | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.post(`${baseURL}/api/v1/company-frames/company/${companyId}/assign-all`);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to assign all frames' };
+    }
+  },
+};
+
+const importClient = {
+  async importCompanies(file: File): Promise<{ data: ImportResult | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axiosClient.post(`${baseURL}/api/v1/import/companies`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Import failed' };
+    }
+  },
+  async importUsers(file: File): Promise<{ data: ImportResult | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axiosClient.post(`${baseURL}/api/v1/import/users`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Import failed' };
+    }
+  },
+  async importEmployees(file: File): Promise<{ data: ImportResult | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await axiosClient.post(`${baseURL}/api/v1/import/employees`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Import failed' };
+    }
+  },
+  async getLogs(options: QueryOptions = {}): Promise<{ data: { items: ImportLog[]; total: number } | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/import/logs`, { params: options });
+      return { data: { items: response.data.data, total: response.data.pagination?.total || 0 } };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get logs' };
+    }
+  },
+  async getLogById(id: string): Promise<{ data: ImportLog | null; error?: string }> {
+    try {
+      const baseURL = getAPIBaseURL();
+      const response = await axiosClient.get(`${baseURL}/api/v1/import/logs/${id}`);
+      return { data: response.data.data };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return { data: null, error: err.response?.data?.message || 'Failed to get log' };
+    }
+  },
+  getTemplateUrl(entityType: 'company' | 'user' | 'employee'): string {
+    const baseURL = getAPIBaseURL();
+    return `${baseURL}/api/v1/import/templates/${entityType}`;
+  },
+};
+
 export const client = {
   auth: authClient,
   storage: storageClient,
   reviews: reviewsClient,
   userOrders: userOrdersClient,
+  import: importClient,
+  companyFrames: companyFramesClient,
+  orders: ordersClient,
+  prescriptions: prescriptionClient,
   entities: {
     companies: createEntityClient('companies'),
     employees: createEntityClient('employees'),

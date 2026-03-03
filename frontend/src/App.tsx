@@ -16,6 +16,8 @@ import Employees from './pages/Employees';
 import Users from './pages/Users';
 import Orders from './pages/Orders';
 import SupportTickets from './pages/SupportTickets';
+import Import from './pages/Import';
+import ImportLogs from './pages/ImportLogs';
 
 import Shop from './pages/user/Shop';
 import Catalog from './pages/user/Catalog';
@@ -156,6 +158,22 @@ const App = () => (
                 element={
                   <AdminRoute>
                     <SupportTickets />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/import"
+                element={
+                  <AdminRoute>
+                    <Import />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/import/logs"
+                element={
+                  <AdminRoute>
+                    <ImportLogs />
                   </AdminRoute>
                 }
               />

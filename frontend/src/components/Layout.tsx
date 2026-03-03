@@ -26,6 +26,7 @@ import {
   Settings,
   Sparkles,
   Glasses,
+  FileUp,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -40,6 +41,7 @@ const allNavItems = [
   { path: '/users', label: 'Users', icon: UserCog, roles: ['ADMIN'] },
   { path: '/orders', label: 'Orders', icon: ShoppingCart, roles: ['ADMIN'] },
   { path: '/support', label: 'Support Tickets', icon: HeadsetIcon, roles: ['ADMIN'] },
+  { path: '/import', label: 'CSV Import', icon: FileUp, roles: ['ADMIN'] },
 ];
 
 export default function Layout({ children }: LayoutProps) {

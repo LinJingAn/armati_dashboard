@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,8 @@ import {
   Users,
   ArrowUpRight,
   Plus,
+  Glasses,
+  Loader2,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import client from '@/lib/api';
+import client, { FrameBasic } from '@/lib/api';
 import Layout from '@/components/Layout';
 
 interface Company {
@@ -67,6 +71,14 @@ export default function Companies() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [framesDialogOpen, setFramesDialogOpen] = useState(false);
+  const [framesCompany, setFramesCompany] = useState<Company | null>(null);
+  const [assignedFrames, setAssignedFrames] = useState<FrameBasic[]>([]);
+  const [availableFrames, setAvailableFrames] = useState<FrameBasic[]>([]);
+  const [selectedFrames, setSelectedFrames] = useState<Set<string>>(new Set());
+  const [framesLoading, setFramesLoading] = useState(false);
+  const [framesSaving, setFramesSaving] = useState(false);
+  const [framesSearch, setFramesSearch] = useState('');
 
   const fetchCompanies = async () => {
     try {
@@ -146,6 +158,81 @@ export default function Companies() {
       toast.error('Failed to delete company');
     }
   };
+
+  const openFramesDialog = async (company: Company) => {
+    setFramesCompany(company);
+    setFramesDialogOpen(true);
+    setFramesLoading(true);
+    setFramesSearch('');
+    try {
+      const [assignedRes, availableRes] = await Promise.all([
+        client.companyFrames.getCompanyFrames(String(company.id)),
+        client.companyFrames.getAvailableFrames(String(company.id)),
+      ]);
+      
+      const assigned = assignedRes.data || [];
+      const available = availableRes.data || [];
+      
+      setAssignedFrames(assigned);
+      setAvailableFrames(available);
+      setSelectedFrames(new Set(assigned.map((f: FrameBasic) => f.id)));
+    } catch {
+      toast.error('Failed to load frames');
+    } finally {
+      setFramesLoading(false);
+    }
+  };
+
+  const handleFrameToggle = (frameId: string) => {
+    const newSelected = new Set(selectedFrames);
+    if (newSelected.has(frameId)) {
+      newSelected.delete(frameId);
+    } else {
+      newSelected.add(frameId);
+    }
+    setSelectedFrames(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    const allFrameIds = [...assignedFrames, ...availableFrames].map(f => f.id);
+    setSelectedFrames(new Set(allFrameIds));
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedFrames(new Set());
+  };
+
+  const saveFrameAssignments = async () => {
+    if (!framesCompany) return;
+    
+    setFramesSaving(true);
+    try {
+      const currentlyAssigned = new Set(assignedFrames.map(f => f.id));
+      const toAssign = [...selectedFrames].filter(id => !currentlyAssigned.has(id));
+      const toUnassign = [...currentlyAssigned].filter(id => !selectedFrames.has(id));
+
+      if (toAssign.length > 0) {
+        await client.companyFrames.assignFrames(String(framesCompany.id), toAssign);
+      }
+      if (toUnassign.length > 0) {
+        await client.companyFrames.unassignFrames(String(framesCompany.id), toUnassign);
+      }
+
+      toast.success(`Frames updated: ${toAssign.length} added, ${toUnassign.length} removed`);
+      setFramesDialogOpen(false);
+    } catch {
+      toast.error('Failed to update frames');
+    } finally {
+      setFramesSaving(false);
+    }
+  };
+
+  const allFrames = [...assignedFrames, ...availableFrames];
+  const filteredFrames = allFrames.filter((f) =>
+    f.modelName?.toLowerCase().includes(framesSearch.toLowerCase()) ||
+    f.brand?.toLowerCase().includes(framesSearch.toLowerCase()) ||
+    f.color?.toLowerCase().includes(framesSearch.toLowerCase())
+  );
 
   const filtered = companies.filter(
     (c) =>
@@ -320,6 +407,10 @@ export default function Companies() {
                             <Pencil className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openFramesDialog(company)} className="cursor-pointer">
+                            <Glasses className="h-4 w-4 mr-2" />
+                            Manage Frames
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => confirmDelete(company)} className="cursor-pointer text-red-600">
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -481,6 +572,111 @@ export default function Companies() {
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Frames Management Dialog */}
+        <Dialog open={framesDialogOpen} onOpenChange={setFramesDialogOpen}>
+          <DialogContent className="sm:max-w-2xl rounded-2xl border-0 shadow-2xl max-h-[80vh] flex flex-col">
+            <DialogHeader className="pb-4 border-b">
+              <DialogTitle className="text-xl font-semibold flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600">
+                  <Glasses className="h-5 w-5 text-white" />
+                </div>
+                Manage Frames - {framesCompany?.corporate_name}
+              </DialogTitle>
+            </DialogHeader>
+
+            {framesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-4 py-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="Search frames..."
+                        value={framesSearch}
+                        onChange={(e) => setFramesSearch(e.target.value)}
+                        className="pl-10 h-10 rounded-lg"
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                      Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleDeselectAll}>
+                      Deselect All
+                    </Button>
+                  </div>
+
+                  <div className="text-sm text-gray-500">
+                    {selectedFrames.size} of {allFrames.length} frames selected
+                  </div>
+                </div>
+
+                <ScrollArea className="flex-1 -mx-6 px-6">
+                  <div className="grid grid-cols-2 gap-3 pb-4">
+                    {filteredFrames.map((frame) => (
+                      <div
+                        key={frame.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
+                          selectedFrames.has(frame.id)
+                            ? 'bg-blue-50 border-blue-300'
+                            : 'bg-white border-gray-200 hover:border-gray-300'
+                        }`}
+                        onClick={() => handleFrameToggle(frame.id)}
+                      >
+                        <Checkbox
+                          checked={selectedFrames.has(frame.id)}
+                          onCheckedChange={() => handleFrameToggle(frame.id)}
+                          className="pointer-events-none"
+                        />
+                        {frame.image1Url ? (
+                          <img
+                            src={client.storage.getFullUrl(frame.image1Url)}
+                            alt={frame.modelName}
+                            className="w-12 h-12 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <Glasses className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 truncate">{frame.modelName}</p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {[frame.brand, frame.color, frame.size].filter(Boolean).join(' • ')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </>
+            )}
+
+            <DialogFooter className="pt-4 border-t gap-3">
+              <Button variant="outline" onClick={() => setFramesDialogOpen(false)} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button
+                onClick={saveFrameAssignments}
+                disabled={framesSaving}
+                className="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg shadow-indigo-500/30"
+              >
+                {framesSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Assignments'
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

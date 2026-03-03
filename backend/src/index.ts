@@ -20,6 +20,9 @@ import orderRoutes from './modules/order/order.routes.js';
 import supportTicketRoutes from './modules/support-ticket/supportTicket.routes.js';
 import reviewRoutes from './modules/review/review.routes.js';
 import userOrderRoutes from './modules/user-order/user-order.routes.js';
+import importRoutes from './modules/import/import.routes.js';
+import companyFrameRoutes from './modules/company-frame/companyFrame.routes.js';
+import prescriptionRoutes from './modules/prescription/prescription.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -88,6 +91,9 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/support-tickets', supportTicketRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/user-orders', userOrderRoutes);
+app.use('/api/v1/import', importRoutes);
+app.use('/api/v1/company-frames', companyFrameRoutes);
+app.use('/api/v1/prescriptions', prescriptionRoutes);
 
 app.use(errorHandler);
 

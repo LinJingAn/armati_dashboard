@@ -14,39 +14,42 @@ enum Role {
 }
 
 model Company {
-  id            String     @id @default(uuid())
-  cnpj          String     @unique
-  corporateName String     @map("corporate_name")
+  id            String         @id @default(uuid())
+  cnpj          String         @unique
+  corporateName String         @map("corporate_name")
   email         String?
   phone         String?
-  status        String     @default("active")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
+  status        String         @default("active")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
   users         User[]
   employees     Employee[]
+  companyFrames CompanyFrame[]
 
   @@map("companies")
 }
 
 model User {
-  id                   String      @id @default(uuid())
-  companyId            String?     @map("company_id")
-  company              Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  id                   String               @id @default(uuid())
+  companyId            String?              @map("company_id")
+  company              Company?             @relation(fields: [companyId], references: [id], onDelete: SetNull)
   name                 String
-  email                String      @unique
+  email                String               @unique
   password             String?
-  googleId             String?     @unique @map("google_id")
+  googleId             String?              @unique @map("google_id")
   phone                String?
   whatsapp             String?
-  role                 Role        @default(USER)
-  isActive             Boolean     @default(true) @map("is_active")
-  isEmailVerified      Boolean     @default(false) @map("is_email_verified")
-  emailVerifyToken     String?     @map("email_verify_token")
-  emailVerifyExpires   DateTime?   @map("email_verify_expires")
-  createdAt            DateTime    @default(now()) @map("created_at")
-  updatedAt            DateTime    @updatedAt @map("updated_at")
+  role                 Role                 @default(USER)
+  isActive             Boolean              @default(true) @map("is_active")
+  isEmailVerified      Boolean              @default(false) @map("is_email_verified")
+  emailVerifyToken     String?              @map("email_verify_token")
+  emailVerifyExpires   DateTime?            @map("email_verify_expires")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
   reviews              Review[]
   userOrders           UserOrder[]
+  orderStatusHistory   OrderStatusHistory[]
+  importLogs           ImportLog[]          @relation("ImportLogs")
 
   @@map("users")
 }
@@ -88,21 +91,29 @@ model Frame {
   orders         Order[]
   reviews        Review[]
   userOrderItems UserOrderItem[]
+  companyFrames  CompanyFrame[]
+  orderItems     OrderItem[]
 
   @@map("frames")
 }
 
 model Order {
-  id              String   @id @default(uuid())
-  employeeId      String   @map("employee_id")
-  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  frameId         String   @map("frame_id")
-  frame           Frame    @relation(fields: [frameId], references: [id], onDelete: Cascade)
-  status          String   @default("draft")
-  prescriptionUrl String?  @map("prescription_url")
-  notes           String?
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id               String               @id @default(uuid())
+  orderNumber      String?              @unique @map("order_number")
+  employeeId       String               @map("employee_id")
+  employee         Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  // Legacy single-frame support (optional for backward compat; use items[] for multi-item)
+  frameId          String?              @map("frame_id")
+  frame            Frame?               @relation(fields: [frameId], references: [id], onDelete: Cascade)
+  status           String               @default("draft")
+  prescriptionUrl  String?              @map("prescription_url")
+  notes            String?
+  createdAt        DateTime             @default(now()) @map("created_at")
+  updatedAt        DateTime             @updatedAt @map("updated_at")
+  // Phase 2: Multi-item, prescription spec, status history
+  items            OrderItem[]
+  prescriptionSpec PrescriptionSpec?
+  statusHistory    OrderStatusHistory[]
 
   @@map("orders")
 }
@@ -172,4 +183,117 @@ model UserOrderItem {
   createdAt DateTime  @default(now()) @map("created_at")
 
   @@map("user_order_items")
+}
+
+// ============================================================
+// PHASE 2: CSV Import, Order Management Core
+// ============================================================
+
+// Product-Company mapping (which frames are available to which companies)
+model CompanyFrame {
+  id        String   @id @default(uuid())
+  companyId String   @map("company_id")
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  frameId   String   @map("frame_id")
+  frame     Frame    @relation(fields: [frameId], references: [id], onDelete: Cascade)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([companyId, frameId])
+  @@map("company_frames")
+}
+
+// B2B Order items (multi-item support for Order)
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String   @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  frameId   String   @map("frame_id")
+  frame     Frame    @relation(fields: [frameId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  price     Float?
+  color     String?
+  size      String?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("order_items")
+}
+
+// Optical prescription specification (OD = right eye, OS = left eye)
+model PrescriptionSpec {
+  id        String   @id @default(uuid())
+  orderId   String   @unique @map("order_id")
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  // Right eye (OD - Oculus Dexter)
+  odSphere   Float?  @map("od_sphere")
+  odCylinder Float?  @map("od_cylinder")
+  odAxis     Int?    @map("od_axis")
+  odAddition Float?  @map("od_addition")
+  // Left eye (OS - Oculus Sinister)
+  osSphere   Float?  @map("os_sphere")
+  osCylinder Float?  @map("os_cylinder")
+  osAxis     Int?    @map("os_axis")
+  osAddition Float?  @map("os_addition")
+  // Pupillary distance
+  pdRight    Float?  @map("pd_right")
+  pdLeft     Float?  @map("pd_left")
+  pdBinocular Float? @map("pd_binocular")
+  // Additional notes
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("prescription_specs")
+}
+
+// Order status change history (audit trail)
+model OrderStatusHistory {
+  id         String   @id @default(uuid())
+  orderId    String   @map("order_id")
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId     String?  @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  fromStatus String   @map("from_status")
+  toStatus   String   @map("to_status")
+  note       String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("order_status_history")
+}
+
+// CSV Import session log
+model ImportLog {
+  id           String           @id @default(uuid())
+  userId       String           @map("user_id")
+  user         User             @relation("ImportLogs", fields: [userId], references: [id], onDelete: Cascade)
+  entityType   String           @map("entity_type") // 'company', 'user', 'employee'
+  fileName     String           @map("file_name")
+  status       String           @default("processing") // 'processing', 'completed', 'failed'
+  totalRows    Int              @default(0) @map("total_rows")
+  successCount Int              @default(0) @map("success_count")
+  errorCount   Int              @default(0) @map("error_count")
+  skipCount    Int              @default(0) @map("skip_count")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  completedAt  DateTime?        @map("completed_at")
+  entries      ImportLogEntry[]
+
+  @@map("import_logs")
+}
+
+// Individual row result from a CSV import
+model ImportLogEntry {
+  id          String    @id @default(uuid())
+  importLogId String    @map("import_log_id")
+  importLog   ImportLog @relation(fields: [importLogId], references: [id], onDelete: Cascade)
+  rowNumber   Int       @map("row_number")
+  status      String    // 'success', 'error', 'skipped' (duplicate)
+  entityId    String?   @map("entity_id") // ID of created/updated record if success
+  rawData     Json?     @map("raw_data")
+  errorMessage String?  @map("error_message")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("import_log_entries")
 }

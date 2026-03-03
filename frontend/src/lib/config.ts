@@ -10,7 +10,7 @@ let configLoading = true;
 
 // Default fallback configuration
 const defaultConfig = {
-  API_BASE_URL: 'http://localhost:8000', // Only used if runtime config fails to load
+  API_BASE_URL: 'http://localhost:5000', // Only used if runtime config fails to load
 };
 
 // Function to load runtime configuration (skipped when using static build with VITE_API_BASE_URL)

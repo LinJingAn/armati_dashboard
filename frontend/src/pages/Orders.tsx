@@ -27,6 +27,7 @@ import {
 import { toast } from 'sonner';
 import client from '@/lib/api';
 import Layout from '@/components/Layout';
+import OrderDetailDialog from '@/components/OrderDetailDialog';
 
 interface Order {
   id: number;
@@ -91,6 +92,7 @@ export default function Orders() {
   const [, setDialogOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [, setSaving] = useState(false);
   const [prescriptionFile] = useState<File | null>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
@@ -130,6 +132,10 @@ export default function Orders() {
   const openDetail = (order: Order) => {
     setSelectedOrder(order);
     setDetailOpen(true);
+  };
+
+  const openNewDetail = (orderId: string) => {
+    setSelectedOrderId(orderId);
   };
 
   const handleSave = async () => {
@@ -386,7 +392,7 @@ export default function Orders() {
                         variant="ghost" 
                         size="sm" 
                         className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                        onClick={(e) => { e.stopPropagation(); openDetail(order); }}
+                        onClick={(e) => { e.stopPropagation(); openNewDetail(String(order.id)); }}
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         View
@@ -456,6 +462,14 @@ export default function Orders() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* New Order Detail Dialog with multi-item, history, and workflow support */}
+        <OrderDetailDialog
+          orderId={selectedOrderId}
+          open={!!selectedOrderId}
+          onOpenChange={(open) => !open && setSelectedOrderId(null)}
+          onOrderUpdated={fetchData}
+        />
       </div>
     </Layout>
   );

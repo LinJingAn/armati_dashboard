@@ -5,10 +5,18 @@ interface Props {
   className?: string;
 }
 
+/** Build absolute backend URL for Google OAuth start (must hit backend so it can redirect to Google). */
+function getGoogleOAuthURL(): string {
+  const base = getAPIBaseURL().replace(/\/+$/, '');
+  const path = '/api/v1/auth/google';
+  return base.startsWith('http') ? `${base}${path}` : `${window.location.origin}${path}`;
+}
+
 export default function GoogleSignInButton({ label = 'Continue with Google', className = '' }: Props) {
   const handleGoogleSignIn = () => {
-    const apiBase = getAPIBaseURL();
-    window.location.href = `${apiBase}/api/v1/auth/google`;
+    const url = getGoogleOAuthURL();
+    // Full top-level navigation so the backend can respond with 302 to Google (account chooser / sign-in).
+    window.location.assign(url);
   };
 
   return (
