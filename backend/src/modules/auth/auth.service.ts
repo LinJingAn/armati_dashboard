@@ -4,7 +4,6 @@ import crypto from 'crypto';
 import prisma from '../../config/database.js';
 import { env } from '../../config/env.js';
 import { ApiError } from '../../utils/ApiError.js';
-import { emailService } from '../../services/email.service.js';
 import type { LoginInput, RegisterInput, SignupInput, ResendVerificationInput, ChangePasswordInput } from './auth.schema.js';
 import { formatCnpj } from '../../utils/cnpj.js';
 
@@ -147,10 +146,7 @@ export class AuthService {
       },
     });
 
-    // Send verification email (non-blocking)
-    emailService.sendVerificationEmail(user.email, user.name, verifyToken).catch((err) => {
-      console.error('[Email] Failed to send verification email:', err.message);
-    });
+    // TODO: Send verification email via Resend.com when implemented
 
     const token = this.generateToken(user.id, user.email, user.role);
 
@@ -189,10 +185,7 @@ export class AuthService {
       },
     });
 
-    // Send welcome email (non-blocking)
-    emailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
-      console.error('[Email] Failed to send welcome email:', err.message);
-    });
+    // TODO: Optional welcome email via Resend.com when implemented
 
     const jwtToken = this.generateToken(user.id, user.email, user.role);
     return {
@@ -234,9 +227,7 @@ export class AuthService {
       },
     });
 
-    emailService.sendVerificationEmail(user.email, user.name, verifyToken).catch((err) => {
-      console.error('[Email] Failed to resend verification email:', err.message);
-    });
+    // TODO: Send verification email via Resend.com when implemented
 
     return { message: 'Verification email sent. Please check your inbox.' };
   }
