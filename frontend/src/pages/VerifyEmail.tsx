@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { FaGlasses } from 'react-icons/fa';
 import { FiCheckCircle, FiAlertCircle, FiLoader, FiArrowRight } from 'react-icons/fi';
 import { Button } from '@/components/ui/button';
 import client from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { getDefaultRouteForRole } from '@/components/ProtectedRoute';
 
 type Status = 'loading' | 'success' | 'error';
 
@@ -11,6 +13,8 @@ export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<Status>('loading');
   const [message, setMessage] = useState('');
+  const { loginWithToken } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -28,11 +32,21 @@ export default function VerifyEmail() {
       } else {
         setStatus('success');
         setMessage(result.data?.message || 'Your email has been verified!');
+        // Auto-login with the returned JWT token
+        if (result.data?.token) {
+          const user = await loginWithToken(result.data.token);
+          if (user) {
+            // Redirect to appropriate page after 2 seconds
+            setTimeout(() => {
+              navigate(getDefaultRouteForRole(user.role));
+            }, 2000);
+          }
+        }
       }
     };
 
     verify();
-  }, [searchParams]);
+  }, [searchParams, loginWithToken, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#0a0f1a] relative overflow-hidden">

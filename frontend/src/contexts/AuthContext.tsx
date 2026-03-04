@@ -81,10 +81,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (data: SignupData): Promise<AuthResult> => {
     const result = await client.auth.signup(data);
     if (result.data) {
-      setUser(result.data.user as User);
+      const signupUser = result.data.user as User;
+      // Don't set user in context if email verification is required
+      // This prevents automatic redirect before showing "check your email" screen
+      if (signupUser.isEmailVerified) {
+        setUser(signupUser);
+      }
       return {
         success: true,
-        user: result.data.user as User,
+        user: signupUser,
         message: (result.data as { message?: string }).message,
       };
     }
